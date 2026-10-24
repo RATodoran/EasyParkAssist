@@ -2,10 +2,10 @@
 #define CONFIG_H
 
 // define pentru senzori
-#define XSHUT_FRONT_LEFT   2
-#define XSHUT_FRONT_RIGHT  4
-#define XSHUT_REAR_LEFT    6
-#define XSHUT_REAR_RIGHT   7
+#define XSHUT_FRONT_LEFT   2 //fata stanga
+#define XSHUT_FRONT_RIGHT  4 //fata dreapta
+#define XSHUT_REAR_LEFT    6 //spate stanga
+#define XSHUT_REAR_RIGHT   7 //spate dreapta
 
 // adresare pentru twi
 #define ADDR_FRONT_LEFT    0x30

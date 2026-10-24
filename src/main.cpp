@@ -1,10 +1,11 @@
+
 #include <Arduino.h>
+#include "motors.h"
 
 void setup() {
-    DDRB |= (1 << DDB0);
+    initializareMotoare();
 }
 
 void loop() {
-    PORTB ^= (1 << PORTB0);
-    delay(1000);
+    testMotoare();
 }
