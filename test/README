@@ -1,11 +1,162 @@
+# EasyParkAssist
 
-This directory is intended for PlatformIO Test Runner and project tests.
+**Proiect embedded de asistență la parcare — prototip în dezvoltare**
 
-Unit Testing is a software testing method by which individual units of
-source code, sets of one or more MCU program modules together with associated
-control data, usage procedures, and operating procedures, are tested to
-determine whether they are fit for use. Unit testing finds problems early
-in the development cycle.
+EasyParkAssist este un proiect realizat pe o platformă mobilă de dimensiuni reduse, controlată de un **Arduino Uno R3**. Scopul final este identificarea unui spațiu de parcare cu ajutorul senzorilor de distanță și efectuarea unor manevre de parcare folosind motoarele de tracțiune și direcție.
 
-More information about PlatformIO Unit Testing:
-- https://docs.platformio.org/en/latest/advanced/unit-testing/index.html
+În această etapă, proiectul se află la **realizarea cablajului, verificarea componentelor și integrarea modulelor software**. Parcarea automată nu este încă implementată și nici validată experimental.
+
+## 1. Obiective
+
+- Citirea distanțelor față de obstacole cu patru senzori VL53L0X.
+- Comanda separată a motorului de tracțiune și a motorului de direcție.
+- Afișarea distanțelor și a stării sistemului pe un LCD 16×2 cu interfață I²C.
+- Comunicarea cu un telefon Android prin Bluetooth HC-05.
+- Ulterior: detectarea unui loc de parcare, calculul manevrelor și execuția parcării automate.
+
+## 2. Componente hardware
+
+| Componentă | Utilizare |
+|---|---|
+| Arduino Uno R3 | Unitatea principală de control |
+| 4 × VL53L0X (ToF) | Măsurarea distanțelor față de obstacole |
+| LCD 16×2 cu adaptor I²C | Afișarea distanțelor și mesajelor |
+| HC-05 | Comunicație Bluetooth serială cu telefonul |
+| Driver de motoare HW-627 (denumirea comercială a modulului folosit) | Acționarea celor două motoare; modelul circuitului trebuie verificat după inscripția de pe placă |
+| Motor DC de tracțiune | Deplasare înainte/înapoi |
+| Motor DC de direcție, cu mecanism de revenire | Viraj stânga/dreapta |
+| Fire, breadboard și alimentare | Interconectarea componentelor |
+
+**Atenție:** alimentarea și nivelurile logice admise se verifică pentru fiecare modul fizic în parte. Toate circuitele care comunică între ele au nevoie de masă comună. Intrarea XSHUT a senzorului nu trebuie comandată direct cu 5 V dacă placa de breakout nu asigură protecția/adaptarea necesară.
+
+## 3. Structura software
+
+Codul este scris în **C++ pentru Arduino**, utilizând **Visual Studio Code + PlatformIO**. Proiectul este organizat în fișiere header (`include/`) și fișiere de implementare (`src/`).
+
+```text
+EasyParkAssist/
+├── include/
+│   ├── bluetooth.h
+│   ├── config.h
+│   ├── display.h
+│   ├── motors.h
+│   └── sensors.h
+├── src/
+│   ├── bluetooth.cpp
+│   ├── config.cpp
+│   ├── display.cpp
+│   ├── main.cpp
+│   ├── motors.cpp
+│   └── sensors.cpp
+├── platformio.ini
+└── README.md
+```
+
+| Modul | Rol în proiect |
+|---|---|
+| `main.cpp` | Inițializare generală, citire periodică și coordonarea testelor |
+| `sensors.h/.cpp` | Activarea secvențială a senzorilor, schimbarea adreselor I²C și citirea distanțelor |
+| `display.h/.cpp` | Inițializarea LCD-ului și afișarea valorilor |
+| `motors.h/.cpp` | Funcții pentru înainte, înapoi, stânga, dreapta și oprire; include o secvență de test |
+| `bluetooth.h/.cpp` | Inițializarea HC-05 și citirea caracterelor recepționate |
+| `config.h` | Definiții de pini și adrese; **necesită sincronizare cu implementările actuale** |
+| `config.cpp` | În prezent nu conține logică de configurare |
+
+Modulele `geometry` și `parking`, precum și aplicația mobilă dedicată, sunt planificate pentru etapele ulterioare; **nu apar ca implementări în arhiva verificată**.
+
+## 4. Conexiuni folosite în codul actual
+
+### Driver motoare
+
+| Arduino Uno | Semnal driver |
+|---|---|
+| D5 | SLEEP / Enable (activat HIGH în cod) |
+| D6 | IN1 — tracțiune |
+| D7 | IN2 — tracțiune |
+| D8 | IN3 — direcție |
+| D9 | IN4 — direcție |
+
+Conform codului, motorul de tracțiune este controlat cu IN1/IN2, iar motorul de direcție cu IN3/IN4. **Aceste atribuiri trebuie comparate cu bornele reale ale driverului înainte de alimentare.**
+
+### Senzori și LCD
+
+| Arduino Uno | Conexiune |
+|---|---|
+| A0, A1, A2, A3 | XSHUT pentru senzorii 1–4, în această ordine |
+| A4 (SDA) | SDA pentru senzori și LCD |
+| A5 (SCL) | SCL pentru senzori și LCD |
+
+Senzorii VL53L0X au inițial adresa I²C implicită `0x29`. Codul încearcă să îi pornească pe rând folosind XSHUT și să le atribuie adresele `0x30`, `0x31`, `0x32` și `0x33`. LCD-ul este configurat în cod la adresa `0x27`.
+
+### Bluetooth
+
+Modulul separat `bluetooth.cpp` utilizează **SoftwareSerial**, cu **D10 = RX Arduino** și **D11 = TX Arduino**. Astfel, legăturile corespunzătoare acestui modul sunt:
+
+- HC-05 **TXD → Arduino D10**.
+- Arduino **D11 → divizor rezistiv → HC-05 RXD**.
+- HC-05 GND → masa comună; alimentarea se face conform specificațiilor plăcii HC-05.
+
+Pentru un divizor de aproximativ 3,33 V pornind de la 5 V: 1 kΩ între D11 și nodul RXD, respectiv 2 kΩ între nodul RXD și GND.
+
+**Există însă două variante de Bluetooth în repository:** `bluetooth.cpp` folosește D10/D11, în timp ce `main.cpp` din arhiva verificată citește comenzi pe `Serial` (D0/D1). Înainte de testul integrat trebuie aleasă și unificată o singură variantă.
+
+## 5. Ce a fost realizat până acum
+
+- Repository Git inițializat și structură modulară a proiectului stabilită.
+- Mediu PlatformIO configurat pentru Arduino Uno; au fost realizate compilări și încărcări de programe pe placă.
+- Montajul platformei mobile și cablajele modulelor au fost începute, apoi ajustate în mai multe etape.
+- Funcționarea comunicației cu modulul **HC-05** a fost verificată anterior cu un telefon Android.
+- Au fost scrise și testate secvențe de comandă a motoarelor; funcționarea ansamblului integrat necesită validare.
+- LCD-ul a reușit să afișeze mesaje și valori în anumite teste.
+- Există implementare pentru inițializarea și citirea celor patru senzori VL53L0X, dar comunicația simultană nu este încă stabilă.
+
+Aceste realizări **nu reprezintă o confirmare a funcționării sistemului de parcare automată**.
+
+## 6. Probleme cunoscute
+
+1. **Senzori VL53L0X:** au fost observate erori la inițializare și citiri invalide (`-1` în versiunea anterioară a codului, respectiv `65535`/`ERR` în varianta cu `uint16_t` și tratarea timeout-ului). Cauza nu este încă stabilită; sunt investigate alimentarea, masa comună, lipiturile și magistrala I²C.
+2. **LCD:** în unele teste textul dispare și rămâne doar iluminarea de fundal. Trebuie verificată stabilitatea alimentării și comunicația I²C.
+3. **Cablaj:** au fost identificate lipituri și contacte care necesită verificare/refacere. Diagnosticul hardware nu este finalizat.
+4. **Configurații divergente:** pinii din `config.h` nu coincid cu cei utilizați în `motors.cpp`, `sensors.cpp` și `bluetooth.cpp`. De asemenea, `main.cpp` conține o variantă separată de control al motoarelor, în loc să utilizeze exclusiv modulul `motors.cpp`.
+5. **Controlul motoarelor:** testele existente nu au o protecție completă la pierderea comunicației sau la atingerea capetelor mecanice de cursă. Nu se recomandă testarea nesupravegheată.
+
+## 7. Compilare și încărcare
+
+1. Deschide directorul proiectului în Visual Studio Code, cu extensia **PlatformIO** instalată.
+2. Conectează Arduino Uno prin USB și identifică portul serial disponibil.
+3. Verifică `platformio.ini`. În arhiva analizată, acesta conține:
+
+```ini
+[env:uno]
+platform = atmelavr
+board = uno
+framework = arduino
+upload_port = COM5
+monitor_speed = 9600
+lib_deps =
+    pololu/VL53L0X
+    marcoschwartz/LiquidCrystal_I2C
+```
+
+4. Schimbă `upload_port` dacă Arduino folosește alt port COM sau elimină această linie pentru detecția automată.
+5. Execută **Build**, apoi **Upload**. Pentru mesajele seriale folosește **Monitor**, la 9600 baud.
+
+Dacă Bluetooth-ul este conectat pe D0/D1 (varianta hardware Serial), conexiunile pot interfera cu încărcarea prin USB; se recomandă utilizarea unei singure configurații verificate înainte de upload.
+
+## 8. Etape următoare
+
+- [ ] Refacerea lipiturilor și verificarea continuității și a alimentărilor.
+- [ ] Testarea individuală a fiecărui VL53L0X și apoi a tuturor pe aceeași magistrală I²C.
+- [ ] Confirmarea afișării stabile pe LCD în timp ce senzorii funcționează.
+- [ ] Unificarea pinilor și eliminarea implementărilor duplicate din `main.cpp`.
+- [ ] Integrarea comenzilor Bluetooth cu modulul `motors.cpp`.
+- [ ] Introducerea opririi de siguranță a motoarelor și verificarea limitelor mecanice ale direcției.
+- [ ] Implementarea modulelor de geometrie și a algoritmului de parcare.
+- [ ] Dezvoltarea/interconectarea aplicației mobile dedicate.
+- [ ] Testarea completă a parcării și documentarea rezultatelor reale.
+
+## 9. Stadiul proiectului
+
+**Actualizat la 27 octombrie 2026.**
+
+EasyParkAssist este în faza de **prototip hardware și dezvoltare modulară software**. Prioritatea este obținerea unui cablaj stabil și a unor măsurători fiabile de la cei patru senzori, înaintea implementării algoritmului de parcare automată.
