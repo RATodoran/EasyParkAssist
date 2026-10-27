@@ -2,12 +2,9 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <VL53L0X.h>
-#include "sensors.h"
 
-#define XSHUT_1 A0
-#define XSHUT_2 A1
-#define XSHUT_3 A2
-#define XSHUT_4 A3
+#include "sensors.h"
+#include "config.h"
 
 VL53L0X senzor1;
 VL53L0X senzor2;
@@ -17,7 +14,17 @@ VL53L0X senzor4;
 bool initSensors() {
 
     const uint8_t pini[4] = {
-        XSHUT_1, XSHUT_2, XSHUT_3, XSHUT_4
+        XSHUT_FRONT_LEFT,
+        XSHUT_FRONT_RIGHT,
+        XSHUT_REAR_LEFT,
+        XSHUT_REAR_RIGHT
+    };
+
+    const uint8_t adrese[4] = {
+        ADDR_FRONT_LEFT,
+        ADDR_FRONT_RIGHT,
+        ADDR_REAR_LEFT,
+        ADDR_REAR_RIGHT
     };
 
     VL53L0X* senzori[4] = {
@@ -32,10 +39,9 @@ bool initSensors() {
 
     delay(20);
 
-    // Pornim si initializam senzorii pe rand
+    // Initializam senzorii pe rand
     for (int i = 0; i < 4; i++) {
 
-        // Eliberam XSHUT fara a aplica 5V pe pin
         pinMode(pini[i], INPUT);
         delay(20);
 
@@ -47,7 +53,7 @@ bool initSensors() {
             return false;
         }
 
-        senzori[i]->setAddress(0x30 + i);
+        senzori[i]->setAddress(adrese[i]);
         senzori[i]->startContinuous();
 
         Serial.print(F("Senzor "));

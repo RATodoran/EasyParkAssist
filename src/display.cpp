@@ -3,8 +3,9 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include "display.h"
+#include "config.h"
 
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
 
 void initDisplay() {
     lcd.init();

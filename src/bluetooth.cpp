@@ -1,25 +1,22 @@
 
 #include <Arduino.h>
 #include <SoftwareSerial.h>
+
 #include "bluetooth.h"
+#include "config.h"
 
-const int BT_RX = 10;
-const int BT_TX = 11;
-
-SoftwareSerial bluetooth(BT_RX, BT_TX);
+SoftwareSerial bluetooth(BT_RX_PIN, BT_TX_PIN);
 
 void initializareBluetooth() {
-    Serial.begin(9600);
-    bluetooth.begin(9600);
-
-    Serial.println("Bluetooth pregatit!");
+    bluetooth.begin(SERIAL_BAUD);
+    Serial.println(F("Bluetooth pregatit!"));
 }
 
 void testBluetooth() {
-    if (bluetooth.available()) {
+    if (bluetooth.available() > 0) {
         char mesaj = bluetooth.read();
 
-        Serial.print("Primit: ");
+        Serial.print(F("Primit: "));
         Serial.println(mesaj);
     }
 }
